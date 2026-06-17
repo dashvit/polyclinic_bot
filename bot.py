@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -553,4 +554,3 @@ def run_web_server():
 Thread(target=run_web_server).start()
 
 if __name__ == "__main__":
-    main()
