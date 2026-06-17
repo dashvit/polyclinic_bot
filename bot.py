@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 Telegram-бот-справочник для КГП «Поликлиника №2 города Темиртау»
@@ -541,9 +538,9 @@ def main() -> None:
 # ВЕБ-СЕРВЕР ДЛЯ "СЕРДЦЕБИЕНИЯ"
 # ============================================================
 
-app = Flask(name)
+app = Flask(_name_)
 
-@app.route('/')
+app.route('/')
 def health_check():
     return "I'm alive!", 200
 
@@ -554,3 +551,4 @@ def run_web_server():
 Thread(target=run_web_server).start()
 
 if __name__ == "__main__":
+     main()
