@@ -1,18 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 """
 Telegram-бот-справочник для КГП «Поликлиника №2 города Темиртау»
 Версия: 10.0 — полное приветствие, все FAQ, все врачи с фамилиями и временем
 """
 
-import logging
 import os
-from flask import Flask
+import logging
 from threading import Thread
-
-print("🚀 Бот ищет токен...")
-token = os.environ.get("TELEGRAM_BOT_TOKEN")
-print(f"🔑 Токен найден: {token[:5]}...{token[-5:]}")
-
+from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -43,20 +40,16 @@ CONTACTS = {
 }
 
 DEPARTMENTS = {
-    "adult": "🏥 **Взрослое отделение**\n📍 1–2 этаж (каб. 101–232)\n\nПервичная медико-санитарная помощь взрослому населению. Терапевты и узкие специалисты.",
-    "children": "🏥 **Детское отделение**\n📍 1–2 этаж (каб. 109–128, 203, 209, 215–217, 221–223, 238, 302)\n\n8 педиатрических участков. Узкие специалисты: ЛОР, окулист, невролог, хирург, кардиолог, ортопед, аллерголог, дерматолог.",
-    "gynecology": "🏥 **Женская консультация**\n📍 4 этаж (каб. 401–403)\n\nАкушерско-гинекологическая помощь. Прием беременных и гинекологических пациенток.",
-    "day_hospital": "🏥 **Дневной стационар**\n📍 2–3 этаж\n\n22 терапевтические койки + 3 хирургических койки (ЦАХ).",
-    "diagnostics": "🫀 **Диагностическое отделение**\n📍 2 этаж (каб. 302 и др.)\n\nУЗИ, ЭКГ, ЭхоКГ, холтеровское мониторирование, СМАД, тредмил-тест, ФГДС, спирография, рентген, маммография, флюорография.",
-    "laboratory": "🧪 **Лаборатория**\n📍 1 этаж\n\nОбщеклинические, гематологические и биохимические исследования.",
-    "prevention": "📋 **Отделение профилактики**\n📍 3 этаж\n\nПсихолог, социальный работник, профилактические осмотры, лекции по ЗОЖ.",
-    "emergency": "🚑 **Скорая неотложная помощь**\n📍 1 этаж\n\nЭкстренная помощь в неотложных состояниях.",
-    "dentistry": "🦷 **Стоматология**\n📍 2–3 этаж (каб. 215)\n\n🕐 Пн–Пт: 9:00–16:00\n• 9:00–10:00 — экстренные (взрослые и дети)\n• 10:00–13:00 — дети и беременные (по записи через терапевтов/педиатров)\n• 14:00–15:00 — взрослые\n• 15:00–16:00 — детский скрининг\n\n🆓 **Бесплатно:** дети до 18 лет, беременные, инвалиды, пенсионеры.",
+    "adult": "🏥 **Взрослое отделение**\n📍 1–2 этаж (каб. 101–232)\n\nПервичная медико-санитарная помощь взрослому населению.",
+    "children": "🏥 **Детское отделение**\n📍 1–2 этаж (каб. 109–128, 203, 209, 215–217, 221–223, 238, 302)\n\n8 педиатрических участков.",
+    "gynecology": "🏥 **Женская консультация**\n📍 4 этаж (каб. 401–403)\n\nАкушерско-гинекологическая помощь.",
+    "day_hospital": "🏥 **Дневной стационар**\n📍 2–3 этаж\n\n22 терапевтические + 3 хирургических койки.",
+    "diagnostics": "🫀 **Диагностика**\n📍 2 этаж (каб. 302)\n\nУЗИ, ЭКГ, ЭхоКГ, холтер, СМАД, тредмил, ФГДС, спирография, рентген, маммография, флюорография.",
+    "laboratory": "🧪 **Лаборатория**\n📍 1 этаж\n\nОбщеклинические, гематологические, биохимические исследования.",
+    "prevention": "📋 **Отделение профилактики**\n📍 3 этаж\n\nПсихолог, соцработник, профосмотры, лекции по ЗОЖ.",
+    "emergency": "🚑 **Скорая неотложная помощь**\n📍 1 этаж\n\nЭкстренная помощь.",
+    "dentistry": "🦷 **Стоматология**\n📍 2–3 этаж (каб. 215)\n\n🕐 Пн–Пт: 9:00–16:00\n🆓 Бесплатно: дети до 18 лет, беременные, инвалиды, пенсионеры.",
 }
-
-# ============================================================
-# ВРАЧИ — ВСЕ С ФАМИЛИЯМИ, ДНЯМИ И ВРЕМЕНЕМ
-# ============================================================
 
 # Взрослые терапевты
 ADULT_DOCTORS = {
@@ -66,27 +59,27 @@ ADULT_DOCTORS = {
     "Гатин Р.Ф.": "ВОП (зам.директора), уч. №6, каб. 107\n🕐 Пн–Пт: 8:00–16:00",
 }
 
-# Взрослые узкие специалисты — ВСЕ с фамилиями и временем
+# Взрослые узкие специалисты
 ADULT_SPECIALISTS = {
     "Аллерголог": {"doctor": "Цхай О.А.", "info": "каб. 238\n🕐 Пн, Чт: 8:00–10:40"},
     "Гастроэнтеролог": {"doctor": "Бейсенова А.К.", "info": "каб. 112\n🕐 Пн–Пт: 8:00–14:00"},
     "Дерматовенеролог": {"doctor": "Коджебаш В.Н.", "info": "Зам. директора по МЧ, каб. 304\n🕐 Пн–Пт: 8:00–16:00"},
     "Инфекционист": {"doctor": "Жумабаева Н.С.", "info": "каб. 115\n🕐 Вт, Чт: 9:00–15:00"},
     "Кардиолог": {"doctor": "Кемпирбаева М.Т.", "info": "каб. 101\n🕐 Пн–Пт: 8:00–16:00"},
-    "ЛОР (оториноларинголог)": {"doctor": "Сыздикова А.Е.", "info": "каб. 123\n🕐 Пн–Пт: 8:00–13:00"},
+    "ЛОР": {"doctor": "Сыздикова А.Е.", "info": "каб. 123\n🕐 Пн–Пт: 8:00–13:00"},
     "Маммолог": {"doctor": "Аманжолова Г.Т.", "info": "каб. 118\n🕐 Ср: 14:00–17:00"},
-    "Невропатолог (невролог)": {"doctor": "Терехина О.Ф.", "info": "каб. 119\n🕐 Пн: 8:00–10:00, Ср: 14:00–16:00, Пт: 14:00–16:00"},
+    "Невропатолог": {"doctor": "Терехина О.Ф.", "info": "каб. 119\n🕐 Пн: 8:00–10:00, Ср: 14:00–16:00, Пт: 14:00–16:00"},
     "Онколог": {"doctor": "Мухамеджанова Д.К.", "info": "каб. 120\n🕐 Вт, Чт: 9:00–15:00"},
-    "Офтальмолог (окулист)": {"doctor": "Яблонская А.З.", "info": "каб. 109\n🕐 Пн–Пт: 8:00–16:00"},
+    "Офтальмолог": {"doctor": "Яблонская А.З.", "info": "каб. 109\n🕐 Пн–Пт: 8:00–16:00"},
     "Проктолог": {"doctor": "Ермекова Г.Н.", "info": "каб. 116\n🕐 Пн, Ср, Пт: 10:00–14:00"},
     "Профпатолог": {"doctor": "Шарипова Н.Н.", "info": "каб. 304\n🕐 Пн–Пт: 8:00–16:00"},
     "Пульмонолог": {"doctor": "Рахметова Л.Т.", "info": "каб. 117\n🕐 Пн–Пт: 8:00–14:00"},
     "Ревматолог": {"doctor": "Садыкова Г.А.", "info": "каб. 114\n🕐 Вт, Чт: 9:00–15:00"},
-    "Травматолог-ортопед": {"doctor": "Ахмедов У.Г.", "info": "каб. 128\n🕐 Пн, Ср, Пт: 8:00–13:00"},
+    "Травматолог": {"doctor": "Ахмедов У.Г.", "info": "каб. 128\n🕐 Пн, Ср, Пт: 8:00–13:00"},
     "Уролог": {"doctor": "Маликов Т.Р.", "info": "каб. 111\n🕐 Пн, Ср, Пт: 9:00–15:00"},
     "Хирург": {"doctor": "Ельцова В.Н.", "info": "каб. 105\n🕐 Пн–Пт: 8:00–16:00"},
     "Эндокринолог": {"doctor": "Сабирова Р.М.", "info": "каб. 113\n🕐 Пн–Пт: 8:00–14:00"},
-    "Эндоскопист": {"doctor": "Жакенов Б.К.", "info": "каб. 130\n🕐 Пн–Пт: 8:00–15:00 (по записи)"},
+    "Эндоскопист": {"doctor": "Жакенов Б.К.", "info": "каб. 130\n🕐 Пн–Пт: 8:00–15:00"},
     "Психолог": {"doctor": "Сейтказинова М.Е.", "info": "каб. 302\n🕐 Пн–Пт: 9:00–17:00"},
 }
 
@@ -97,7 +90,7 @@ GYNECOLOGISTS = {
     "Литвинов Е.А.": "Гинеколог, уч. №1 и №3, каб. 403\n🕐 Пн–Пт: 10:00–13:00 (Чт: 10:00–12:00)",
 }
 
-# Педиатры (участковые)
+# Педиатры
 PEDIATRICIANS = {
     "Борисова Е.Л.": "Педиатр, каб. 110\n🕐 Пн: 8:00–11:00 | Пт: 14:00–17:00 | Ср: 15:00–18:00 | Чт: 14:00–17:00",
     "Терехина О.Ф.": "Педиатр, каб. 110\n🕐 Пн: 14:00–18:00 | Пт: 8:00–12:00 | Ср: 8:00–12:00 | Чт: 12:00–16:00",
@@ -135,8 +128,8 @@ CHILD_SPECIALISTS = {
 PRICES = [
     ("Прием: Терапевт", "2 470 ₸"),
     ("Прием: Педиатр", "2 470 ₸"),
-    ("Прием: ВОП (семейный врач)", "2 868 ₸"),
-    ("Консультация: Акушер-гинеколог", "4 296 ₸"),
+    ("Прием: ВОП", "2 868 ₸"),
+    ("Консультация: Гинеколог", "4 296 ₸"),
     ("Консультация: Хирург", "4 357 ₸"),
     ("Консультация: Кардиолог", "4 111 ₸"),
     ("Консультация: Невролог", "4 068 ₸"),
@@ -146,26 +139,22 @@ PRICES = [
     ("Консультация: ЛОР", "4 068 ₸"),
     ("Анализ мочи по Нечипоренко", "593 ₸"),
     ("Копрограмма", "731 ₸"),
-    ("Общий анализ крови (автомат)", "1 744 ₸"),
+    ("Общий анализ крови", "1 744 ₸"),
     ("ЭКГ (12 отведений)", "1 711 ₸"),
     ("Эхокардиография", "4 498 ₸"),
     ("УЗИ: печень, желчный пузырь, ПЖ, селезенка", "6 017 ₸"),
     ("УЗИ: Почки", "3 084 ₸"),
     ("УЗИ: Щитовидная железа", "3 894 ₸"),
     ("УЗИ: Молочные железы", "3 873 ₸"),
-    ("ФГДС (диагностическая)", "6 072 ₸"),
+    ("ФГДС", "6 072 ₸"),
     ("Рентгенография: органов грудной клетки", "1 853 ₸"),
     ("Мамография (4 снимка)", "7 506 ₸"),
-    ("Флюорография (1 проекция)", "863 ₸"),
+    ("Флюорография", "863 ₸"),
     ("Массаж: Воротниковой зоны", "992 ₸"),
     ("Массаж: Пояснично-крестцовой области", "1 171 ₸"),
 ]
 
-# ============================================================
-# КЛАВИАТУРЫ
-# ============================================================
-
-def make_main_keyboard() -> InlineKeyboardMarkup:
+def make_main_keyboard():
     keyboard = [
         [InlineKeyboardButton("👨‍⚕️ Наши врачи", callback_data="doctors_main")],
         [InlineKeyboardButton("🏥 Отделения", callback_data="departments")],
@@ -175,8 +164,7 @@ def make_main_keyboard() -> InlineKeyboardMarkup:
     ]
     return InlineKeyboardMarkup(keyboard)
 
-
-def make_doctors_main_keyboard() -> InlineKeyboardMarkup:
+def make_doctors_main_keyboard():
     keyboard = [
         [InlineKeyboardButton("👨 Взрослые терапевты", callback_data="doctors_adult")],
         [InlineKeyboardButton("👨‍⚕️ Взрослые узкие специалисты", callback_data="doctors_adult_specialists")],
@@ -187,8 +175,7 @@ def make_doctors_main_keyboard() -> InlineKeyboardMarkup:
     ]
     return InlineKeyboardMarkup(keyboard)
 
-
-def make_doctor_list_keyboard(doctors_dict, callback_prefix) -> InlineKeyboardMarkup:
+def make_doctor_list_keyboard(doctors_dict, callback_prefix):
     keyboard = []
     names = list(doctors_dict.keys())
     for i in range(0, len(names), 2):
@@ -200,8 +187,7 @@ def make_doctor_list_keyboard(doctors_dict, callback_prefix) -> InlineKeyboardMa
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="doctors_back")])
     return InlineKeyboardMarkup(keyboard)
 
-
-def make_departments_keyboard() -> InlineKeyboardMarkup:
+def make_departments_keyboard():
     keyboard = [
         [InlineKeyboardButton("👨‍⚕️ Взрослое отделение", callback_data="dep_adult")],
         [InlineKeyboardButton("👶 Детское отделение", callback_data="dep_children")],
@@ -216,23 +202,16 @@ def make_departments_keyboard() -> InlineKeyboardMarkup:
     ]
     return InlineKeyboardMarkup(keyboard)
 
-
-def make_back_keyboard() -> InlineKeyboardMarkup:
+def make_back_keyboard():
     return InlineKeyboardMarkup([[InlineKeyboardButton("🏠 Главное меню", callback_data="back_main")]])
 
-
-def make_prices_keyboard() -> InlineKeyboardMarkup:
+def make_prices_keyboard():
     keyboard = [
         [InlineKeyboardButton("✅ Да, я прикреплен", callback_data="price_attached")],
         [InlineKeyboardButton("❌ Нет, не прикреплен", callback_data="price_not_attached")],
         [InlineKeyboardButton("🔙 Назад", callback_data="back_main")],
     ]
     return InlineKeyboardMarkup(keyboard)
-
-
-# ============================================================
-# ОБРАБОТЧИКИ
-# ============================================================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
@@ -250,13 +229,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
     return MENU
 
-
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
     data = query.data
 
-    # ===== ГЛАВНОЕ МЕНЮ =====
     if data == "doctors_main":
         await query.edit_message_text(
             "👨‍⚕️ **Выберите категорию врачей:**\n\n"
@@ -330,7 +307,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return SUB_MENU
 
-    # ===== ВЫБОР ВРАЧЕЙ =====
     if data == "doctors_adult":
         await query.edit_message_text(
             "👨 **Взрослые терапевты:**",
@@ -381,7 +357,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return SUB_MENU
 
-    # ===== ИНФОРМАЦИЯ О ВРАЧАХ =====
     if data.startswith("adult_doc_"):
         index = int(data.split("_")[2])
         names = list(ADULT_DOCTORS.keys())
@@ -456,7 +431,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             )
         return DOCTOR_SUB_MENU
 
-    # ===== ОТДЕЛЕНИЯ =====
     if data.startswith("dep_"):
         dep_key = data.split("_")[1]
         dep_info = DEPARTMENTS.get(dep_key, "Информация временно отсутствует.")
@@ -467,7 +441,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return SUB_MENU
 
-    # ===== ЦЕНЫ =====
     if data == "price_attached":
         await query.edit_message_text(
             "✅ **Отлично!**\n\n"
@@ -495,7 +468,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return SUB_MENU
 
-    # ===== ВОЗВРАТ =====
     if data == "back_main":
         await query.edit_message_text(
             "🏥 **Главное меню**\n\nВыберите нужный раздел:",
@@ -510,12 +482,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
     return MENU
 
-
 def main() -> None:
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not token:
         raise ValueError("TELEGRAM_BOT_TOKEN не найден! Установите переменную окружения.")
-    
+
     application = Application.builder().token(token).build()
 
     conv_handler = ConversationHandler(
@@ -528,19 +499,17 @@ def main() -> None:
         fallbacks=[CommandHandler("start", start)],
     )
 
-
     application.add_handler(conv_handler)
-
-    print("🤖 Бот запущен! Нажмите Ctrl+C для остановки.")
+    print("🤖 Бот запущен!")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 # ============================================================
 # ВЕБ-СЕРВЕР ДЛЯ "СЕРДЦЕБИЕНИЯ"
 # ============================================================
 
-app = Flask(_name_)
+app = Flask(__name__)
 
-app.route('/')
+@app.route('/')
 def health_check():
     return "I'm alive!", 200
 
@@ -551,4 +520,4 @@ def run_web_server():
 Thread(target=run_web_server).start()
 
 if __name__ == "__main__":
-     main()
+    main()
